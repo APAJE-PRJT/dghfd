@@ -87,7 +87,7 @@ screenGui.ResetOnSpawn = false
 -- Tombol toggle untuk membuka GUI (draggable)
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
-toggleButton.Text = "📱 TP"
+toggleButton.Text = "📱"
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.TextSize = cfg.fontSizeLarge
 toggleButton.Font = Enum.Font.GothamBold
@@ -1416,9 +1416,6 @@ updatePositionDisplay()
 -- Tambahkan beberapa checkpoint contoh
 spawn(function()
     wait(1)
-    saveCheckpoint(Vector3.new(-2164, 588, -3632))
-    saveCheckpoint(Vector3.new(-2166, 588, -3631))
-    saveCheckpoint(Vector3.new(-2150, 588, -3620))
 end)
 
 -- Pasang GUI ke player
@@ -1426,8 +1423,8 @@ screenGui.Parent = player.PlayerGui
 
 -- Notifikasi
 StarterGui:SetCore("SendNotification", {
-    Title = "NANAO Teleport GUI Loaded",
-    Text = "Click TP button to open menu",
+    Title = "Nanao Save Teleport Loaded",
+    Text = "Click 📱 button to open menu",
     Duration = 3,
     Icon = "rbxassetid://6031075938"
 })
