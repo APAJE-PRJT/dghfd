@@ -1,0 +1,1433 @@
+-- NANAO SAVE TELEPORT GUI Script - FINAL VERSION
+-- Support PC, Laptop, Mobile, Tablet
+-- By: NNG
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+local player = Players.LocalPlayer
+local savedCheckpoints = {}
+local selectedCheckpoints = {}
+local teleportCooldown = 5
+local isTeleporting = false
+local loopEnabled = false
+local guiVisible = false -- Start hidden
+local teleportSequenceActive = false
+local respawnEnabled = false
+
+-- Deteksi perangkat
+local function detectDevice()
+    local touchEnabled = UserInputService.TouchEnabled
+    local mouseEnabled = UserInputService.MouseEnabled
+    local screenSize = workspace.CurrentCamera.ViewportSize
+    
+    -- Prioritas mobile jika ada touch input
+    if touchEnabled then
+        -- Cek jika ini tablet (screen lebih besar dari mobile biasa)
+        if screenSize.X > 1200 or screenSize.Y > 1200 then
+            return "TABLET"
+        else
+            return "MOBILE"
+        end
+    elseif mouseEnabled then
+        return "PC"
+    else
+        return "UNKNOWN"
+    end
+end
+
+local deviceType = detectDevice()
+local isMobile = deviceType == "MOBILE"
+local isTablet = deviceType == "TABLET"
+local isPC = deviceType == "PC"
+
+-- Konfigurasi berdasarkan perangkat
+local config = {
+    PC = {
+        guiSize = UDim2.new(0, 380, 0, 620),
+        buttonHeight = 35,
+        fontSizeSmall = 12,
+        fontSizeMedium = 14,
+        fontSizeLarge = 16,
+        scrollbarThickness = 4,
+        cornerRadius = 8,
+        padding = 10
+    },
+    MOBILE = {
+        guiSize = UDim2.new(0, 350, 0, 600),
+        buttonHeight = 45,
+        fontSizeSmall = 14,
+        fontSizeMedium = 16,
+        fontSizeLarge = 18,
+        scrollbarThickness = 8,
+        cornerRadius = 10,
+        padding = 12
+    },
+    TABLET = {
+        guiSize = UDim2.new(0, 400, 0, 650),
+        buttonHeight = 40,
+        fontSizeSmall = 13,
+        fontSizeMedium = 15,
+        fontSizeLarge = 17,
+        scrollbarThickness = 6,
+        cornerRadius = 10,
+        padding = 12
+    }
+}
+
+local cfg = config[deviceType] or config.PC
+
+-- Buat GUI utama
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NANAOTeleportGUI"
+screenGui.ResetOnSpawn = false
+
+-- Tombol toggle untuk membuka GUI (draggable)
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Text = "📱 TP"
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.TextSize = cfg.fontSizeLarge
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+toggleButton.Size = UDim2.new(0, 80, 0, 50)
+toggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+toggleButton.Visible = true
+toggleButton.ZIndex = 100
+toggleButton.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.Parent = toggleButton
+
+-- Frame utama (Bubble GUI) - awalnya hidden
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Size = cfg.guiSize
+mainFrame.Position = UDim2.new(0, 100, 0.5, -cfg.guiSize.Y.Offset/2)
+mainFrame.Visible = false
+mainFrame.ZIndex = 50
+mainFrame.Parent = screenGui
+
+-- Bubble effect dengan rounded corners
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 20)
+corner.Parent = mainFrame
+
+-- Shadow effect
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+shadow.ImageTransparency = 0.8
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+shadow.BackgroundTransparency = 1
+shadow.Size = UDim2.new(1, 0, 1, 0)
+shadow.Parent = mainFrame
+
+-- ========== DRAG FUNCTIONALITY UNTUK TOGGLE BUTTON ==========
+local draggingToggle = false
+local dragToggleInput, dragToggleStart, startTogglePos
+
+local function updateToggleInput(input)
+    local delta = input.Position - dragToggleStart
+    toggleButton.Position = UDim2.new(startTogglePos.X.Scale, startTogglePos.X.Offset + delta.X, startTogglePos.Y.Scale, startTogglePos.Y.Offset + delta.Y)
+end
+
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingToggle = true
+        dragToggleStart = input.Position
+        startTogglePos = toggleButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingToggle = false
+            end
+        end)
+    end
+end)
+
+toggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragToggleInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingToggle and (input == dragToggleInput) then
+        updateToggleInput(input)
+    end
+end)
+-- =============================================================
+
+-- Drag functionality untuk main frame
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input == dragInput) then
+        updateInput(input)
+    end
+end)
+
+-- Header dengan tombol close
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+header.Size = UDim2.new(1, 0, 0, 50)
+header.BorderSizePixel = 0
+header.ZIndex = 51
+header.Parent = mainFrame
+
+local headerCorner = Instance.new("UICorner")
+headerCorner.CornerRadius = UDim.new(0, 20)
+headerCorner.Parent = header
+
+-- Judul
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Text = "NANAO SAVE TELEPORT"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = cfg.fontSizeLarge
+title.Font = Enum.Font.GothamBold
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(0.7, 0, 1, 0)
+title.Position = UDim2.new(0.15, 0, 0, 0)
+title.ZIndex = 52
+title.Parent = header
+
+-- Tombol close (pojok kanan)
+local closeButton = Instance.new("TextButton")
+closeButton.Name = "CloseButton"
+closeButton.Text = "✕"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = cfg.fontSizeLarge
+closeButton.Font = Enum.Font.GothamBold
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+closeButton.Size = UDim2.new(0, 40, 0, 40)
+closeButton.Position = UDim2.new(1, -45, 0.5, -20)
+closeButton.ZIndex = 52
+closeButton.Parent = header
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.Parent = closeButton
+
+header.Parent = mainFrame
+
+-- Container untuk konten
+local contentContainer = Instance.new("Frame")
+contentContainer.Name = "ContentContainer"
+contentContainer.BackgroundTransparency = 1
+contentContainer.Size = UDim2.new(1, 0, 1, -60)
+contentContainer.Position = UDim2.new(0, 0, 0, 55)
+contentContainer.Visible = true
+contentContainer.ZIndex = 51
+contentContainer.Parent = mainFrame
+
+-- Layout vertikal untuk konten utama
+local mainLayout = Instance.new("UIListLayout")
+mainLayout.Padding = UDim.new(0, cfg.padding)
+mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
+mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+mainLayout.Parent = contentContainer
+
+-- Bagian SAVED CHECKPOINTS
+local savedSection = Instance.new("Frame")
+savedSection.Name = "SavedSection"
+savedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+savedSection.BackgroundTransparency = 0
+savedSection.Size = UDim2.new(0.95, 0, 0, 200)
+savedSection.LayoutOrder = 1
+savedSection.ZIndex = 51
+savedSection.Parent = contentContainer
+
+local savedCorner = Instance.new("UICorner")
+savedCorner.CornerRadius = UDim.new(0, 12)
+savedCorner.Parent = savedSection
+
+-- Judul Saved Checkpoints
+local savedTitle = Instance.new("TextLabel")
+savedTitle.Name = "SavedTitle"
+savedTitle.Text = "SAVED CHECKPOINTS"
+savedTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
+savedTitle.TextSize = cfg.fontSizeMedium
+savedTitle.Font = Enum.Font.GothamBold
+savedTitle.BackgroundTransparency = 1
+savedTitle.Size = UDim2.new(1, 0, 0, 30)
+savedTitle.Position = UDim2.new(0, 0, 0, 5)
+savedTitle.ZIndex = 52
+savedTitle.Parent = savedSection
+
+-- Scroll container untuk daftar checkpoint
+local scrollContainer = Instance.new("ScrollingFrame")
+scrollContainer.Name = "ScrollContainer"
+scrollContainer.BackgroundTransparency = 1
+scrollContainer.Size = UDim2.new(0.95, 0, 0, 160)
+scrollContainer.Position = UDim2.new(0.025, 0, 0, 35)
+scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollContainer.ScrollBarThickness = cfg.scrollbarThickness
+scrollContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+scrollContainer.ZIndex = 52
+scrollContainer.Parent = savedSection
+
+local checklistLayout = Instance.new("UIListLayout")
+checklistLayout.Padding = UDim.new(0, cfg.padding-2)
+checklistLayout.SortOrder = Enum.SortOrder.LayoutOrder
+checklistLayout.Parent = scrollContainer
+
+-- Bagian ADD CHECKPOINT
+local addSection = Instance.new("Frame")
+addSection.Name = "AddSection"
+addSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+addSection.BackgroundTransparency = 0
+addSection.Size = UDim2.new(0.95, 0, 0, 340)
+addSection.LayoutOrder = 2
+addSection.ZIndex = 51
+addSection.Parent = contentContainer
+
+local addCorner = Instance.new("UICorner")
+addCorner.CornerRadius = UDim.new(0, 12)
+addCorner.Parent = addSection
+
+-- Judul Add Checkpoint
+local addTitle = Instance.new("TextLabel")
+addTitle.Name = "AddTitle"
+addTitle.Text = "ADD CHECKPOINT"
+addTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
+addTitle.TextSize = cfg.fontSizeMedium
+addTitle.Font = Enum.Font.GothamBold
+addTitle.BackgroundTransparency = 1
+addTitle.Size = UDim2.new(1, 0, 0, 25)
+addTitle.Position = UDim2.new(0, 0, 0, 5)
+addTitle.ZIndex = 52
+addTitle.Parent = addSection
+
+-- Layout untuk konten add section
+local addLayout = Instance.new("UIListLayout")
+addLayout.Padding = UDim.new(0, cfg.padding-2)
+addLayout.SortOrder = Enum.SortOrder.LayoutOrder
+addLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+addLayout.Parent = addSection
+
+-- Position display (real-time)
+local positionFrame = Instance.new("Frame")
+positionFrame.Name = "PositionFrame"
+positionFrame.BackgroundTransparency = 1
+positionFrame.Size = UDim2.new(0.9, 0, 0, 25)
+positionFrame.LayoutOrder = 1
+positionFrame.ZIndex = 52
+positionFrame.Parent = addSection
+
+local positionLabel = Instance.new("TextLabel")
+positionLabel.Name = "PositionLabel"
+positionLabel.Text = "Position: X:0 Y:0 Z:0"
+positionLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
+positionLabel.TextSize = cfg.fontSizeMedium
+positionLabel.Font = Enum.Font.Gotham
+positionLabel.BackgroundTransparency = 1
+positionLabel.Size = UDim2.new(1, 0, 1, 0)
+positionLabel.Parent = positionFrame
+
+-- Baris tombol Copy dan Save
+local buttonRow1 = Instance.new("Frame")
+buttonRow1.Name = "ButtonRow1"
+buttonRow1.BackgroundTransparency = 1
+buttonRow1.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+buttonRow1.LayoutOrder = 2
+buttonRow1.ZIndex = 52
+buttonRow1.Parent = addSection
+
+local buttonLayout1 = Instance.new("UIListLayout")
+buttonLayout1.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout1.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout1.Padding = UDim.new(0, cfg.padding)
+buttonLayout1.Parent = buttonRow1
+
+-- Tombol Copy Selected Checkpoints
+local copySelectedButton = Instance.new("TextButton")
+copySelectedButton.Name = "CopySelectedButton"
+copySelectedButton.Text = "COPY SELECTED"
+copySelectedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+copySelectedButton.TextSize = cfg.fontSizeMedium
+copySelectedButton.Font = Enum.Font.GothamBold
+copySelectedButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+copySelectedButton.Size = UDim2.new(0.48, 0, 1, 0)
+copySelectedButton.LayoutOrder = 1
+copySelectedButton.ZIndex = 53
+copySelectedButton.Parent = buttonRow1
+
+local copySelectedCorner = Instance.new("UICorner")
+copySelectedCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+copySelectedCorner.Parent = copySelectedButton
+
+-- Tombol Save Checkpoint
+local saveButton = Instance.new("TextButton")
+saveButton.Name = "SaveButton"
+saveButton.Text = "SAVE CHECKPOINT"
+saveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveButton.TextSize = cfg.fontSizeMedium
+saveButton.Font = Enum.Font.GothamBold
+saveButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+saveButton.Size = UDim2.new(0.48, 0, 1, 0)
+saveButton.LayoutOrder = 2
+saveButton.ZIndex = 53
+saveButton.Parent = buttonRow1
+
+local saveCorner = Instance.new("UICorner")
+saveCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+saveCorner.Parent = saveButton
+
+-- Baris tombol Start, Loop, Respawn
+local buttonRow2 = Instance.new("Frame")
+buttonRow2.Name = "ButtonRow2"
+buttonRow2.BackgroundTransparency = 1
+buttonRow2.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+buttonRow2.LayoutOrder = 3
+buttonRow2.ZIndex = 52
+buttonRow2.Parent = addSection
+
+local buttonLayout2 = Instance.new("UIListLayout")
+buttonLayout2.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout2.Padding = UDim.new(0, 5)
+buttonLayout2.Parent = buttonRow2
+
+-- Tombol Start/Stop Teleport Sequence
+local startButton = Instance.new("TextButton")
+startButton.Name = "StartButton"
+startButton.Text = "START TELEPORT"
+startButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+startButton.TextSize = cfg.fontSizeSmall
+startButton.Font = Enum.Font.GothamBold
+startButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+startButton.Size = UDim2.new(0.32, 0, 1, 0)
+startButton.LayoutOrder = 1
+startButton.ZIndex = 53
+startButton.Parent = buttonRow2
+
+local startCorner = Instance.new("UICorner")
+startCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+startCorner.Parent = startButton
+
+-- Tombol Loop
+local loopButton = Instance.new("TextButton")
+loopButton.Name = "LoopButton"
+loopButton.Text = "LOOP: OFF"
+loopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+loopButton.TextSize = cfg.fontSizeSmall
+loopButton.Font = Enum.Font.GothamBold
+loopButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+loopButton.Size = UDim2.new(0.32, 0, 1, 0)
+loopButton.LayoutOrder = 2
+loopButton.ZIndex = 53
+loopButton.Parent = buttonRow2
+
+local loopCorner = Instance.new("UICorner")
+loopCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+loopCorner.Parent = loopButton
+
+-- Tombol Respawn
+local respawnButton = Instance.new("TextButton")
+respawnButton.Name = "RespawnButton"
+respawnButton.Text = "RESPAWN: OFF"
+respawnButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+respawnButton.TextSize = cfg.fontSizeSmall
+respawnButton.Font = Enum.Font.GothamBold
+respawnButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+respawnButton.Size = UDim2.new(0.32, 0, 1, 0)
+respawnButton.LayoutOrder = 3
+respawnButton.ZIndex = 53
+respawnButton.Parent = buttonRow2
+
+local respawnCorner = Instance.new("UICorner")
+respawnCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+respawnCorner.Parent = respawnButton
+
+-- Baris Cooldown Dropdown
+local buttonRow3 = Instance.new("Frame")
+buttonRow3.Name = "ButtonRow3"
+buttonRow3.BackgroundTransparency = 1
+buttonRow3.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+buttonRow3.LayoutOrder = 4
+buttonRow3.ZIndex = 52
+buttonRow3.Parent = addSection
+
+local buttonLayout3 = Instance.new("UIListLayout")
+buttonLayout3.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout3.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout3.Padding = UDim.new(0, cfg.padding)
+buttonLayout3.Parent = buttonRow3
+
+-- Cooldown container
+local cooldownContainer = Instance.new("Frame")
+cooldownContainer.Name = "CooldownContainer"
+cooldownContainer.BackgroundTransparency = 1
+cooldownContainer.Size = UDim2.new(1, 0, 1, 0)
+cooldownContainer.LayoutOrder = 1
+cooldownContainer.ZIndex = 53
+cooldownContainer.Parent = buttonRow3
+
+-- Label Cooldown
+local cooldownLabel = Instance.new("TextLabel")
+cooldownLabel.Name = "CooldownLabel"
+cooldownLabel.Text = "COOLDOWN:"
+cooldownLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+cooldownLabel.TextSize = cfg.fontSizeMedium
+cooldownLabel.Font = Enum.Font.Gotham
+cooldownLabel.BackgroundTransparency = 1
+cooldownLabel.Size = UDim2.new(0.4, 0, 1, 0)
+cooldownLabel.Position = UDim2.new(0, 0, 0, 0)
+cooldownLabel.TextXAlignment = Enum.TextXAlignment.Left
+cooldownLabel.Parent = cooldownContainer
+
+-- Dropdown untuk cooldown
+local cooldownDropdown = Instance.new("TextButton")
+cooldownDropdown.Name = "CooldownDropdown"
+cooldownDropdown.Text = tostring(teleportCooldown) .. "s"
+cooldownDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+cooldownDropdown.TextSize = cfg.fontSizeMedium
+cooldownDropdown.Font = Enum.Font.GothamBold
+cooldownDropdown.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+cooldownDropdown.Size = UDim2.new(0.6, 0, 0.8, 0)
+cooldownDropdown.Position = UDim2.new(0.4, 0, 0.1, 0)
+cooldownDropdown.ZIndex = 54
+cooldownDropdown.Parent = cooldownContainer
+
+local dropdownCorner = Instance.new("UICorner")
+dropdownCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+dropdownCorner.Parent = cooldownDropdown
+
+-- Frame untuk dropdown options
+local dropdownFrame = Instance.new("Frame")
+dropdownFrame.Name = "DropdownFrame"
+dropdownFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+dropdownFrame.Size = UDim2.new(0.6, 0, 0, 200)
+dropdownFrame.Position = UDim2.new(0.4, 0, 1, 5)
+dropdownFrame.Visible = false
+dropdownFrame.ZIndex = 60
+dropdownFrame.Parent = cooldownContainer
+
+local dropdownFrameCorner = Instance.new("UICorner")
+dropdownFrameCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+dropdownFrameCorner.Parent = dropdownFrame
+
+local dropdownScroll = Instance.new("ScrollingFrame")
+dropdownScroll.Name = "DropdownScroll"
+dropdownScroll.BackgroundTransparency = 1
+dropdownScroll.Size = UDim2.new(1, 0, 1, 0)
+dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+dropdownScroll.ScrollBarThickness = cfg.scrollbarThickness
+dropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+dropdownScroll.ZIndex = 61
+dropdownScroll.Parent = dropdownFrame
+
+local dropdownList = Instance.new("UIListLayout")
+dropdownList.Padding = UDim.new(0, 2)
+dropdownList.SortOrder = Enum.SortOrder.LayoutOrder
+dropdownList.Parent = dropdownScroll
+
+-- Buat opsi cooldown 1-100 detik
+for i = 1, 100 do
+    local optionButton = Instance.new("TextButton")
+    optionButton.Name = "Option" .. i
+    optionButton.Text = tostring(i) .. " seconds"
+    optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    optionButton.TextSize = cfg.fontSizeSmall
+    optionButton.Font = Enum.Font.Gotham
+    optionButton.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+    optionButton.Size = UDim2.new(1, -10, 0, 30)
+    optionButton.Position = UDim2.new(0, 5, 0, (i-1)*32)
+    optionButton.ZIndex = 62
+    optionButton.LayoutOrder = i
+    optionButton.Parent = dropdownScroll
+    
+    local optionCorner = Instance.new("UICorner")
+    optionCorner.CornerRadius = UDim.new(0, 6)
+    optionCorner.Parent = optionButton
+    
+    optionButton.MouseButton1Click:Connect(function()
+        teleportCooldown = i
+        cooldownDropdown.Text = tostring(i) .. "s"
+        dropdownFrame.Visible = false
+    end)
+end
+
+-- Update canvas size dropdown
+dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 100 * 32)
+
+-- Input coordinate multi-line dengan scrollable
+local inputRow = Instance.new("Frame")
+inputRow.Name = "InputRow"
+inputRow.BackgroundTransparency = 1
+inputRow.Size = UDim2.new(0.9, 0, 0, 120)
+inputRow.LayoutOrder = 5
+inputRow.ZIndex = 52
+inputRow.Parent = addSection
+
+-- ScrollingFrame untuk input
+local inputScroll = Instance.new("ScrollingFrame")
+inputScroll.Name = "InputScroll"
+inputScroll.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+inputScroll.Size = UDim2.new(0.7, 0, 1, 0)
+inputScroll.Position = UDim2.new(0, 0, 0, 0)
+inputScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+inputScroll.ScrollBarThickness = cfg.scrollbarThickness
+inputScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+inputScroll.ZIndex = 53
+inputScroll.Parent = inputRow
+
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+inputCorner.Parent = inputScroll
+
+-- TextBox multi-line
+local coordinateInput = Instance.new("TextBox")
+coordinateInput.Name = "CoordinateInput"
+coordinateInput.PlaceholderText = "Paste Coordinates Here\nFormat: X Y Z\nOne coordinate per line"
+coordinateInput.Text = ""
+coordinateInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+coordinateInput.TextSize = cfg.fontSizeSmall
+coordinateInput.Font = Enum.Font.Gotham
+coordinateInput.BackgroundTransparency = 1
+coordinateInput.Size = UDim2.new(1, -10, 1, 0)
+coordinateInput.Position = UDim2.new(0, 5, 0, 5)
+coordinateInput.TextWrapped = true
+coordinateInput.TextXAlignment = Enum.TextXAlignment.Left
+coordinateInput.TextYAlignment = Enum.TextYAlignment.Top
+coordinateInput.MultiLine = true
+coordinateInput.ZIndex = 54
+coordinateInput.Parent = inputScroll
+
+-- Fungsi untuk update canvas size input
+local function updateInputCanvasSize()
+    local lineCount = 0
+    for _ in coordinateInput.Text:gmatch("\n") do
+        lineCount = lineCount + 1
+    end
+    lineCount = lineCount + 1
+    
+    local minHeight = 100
+    local calculatedHeight = math.max(minHeight, lineCount * 20)
+    inputScroll.CanvasSize = UDim2.new(0, 0, 0, calculatedHeight)
+end
+
+coordinateInput:GetPropertyChangedSignal("Text"):Connect(function()
+    updateInputCanvasSize()
+end)
+
+-- Tombol Load
+local loadButton = Instance.new("TextButton")
+loadButton.Name = "LoadButton"
+loadButton.Text = "LOAD"
+loadButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+loadButton.TextSize = cfg.fontSizeMedium
+loadButton.Font = Enum.Font.GothamBold
+loadButton.BackgroundColor3 = Color3.fromRGB(180, 120, 80)
+loadButton.Size = UDim2.new(0.25, 0, 1, 0)
+loadButton.Position = UDim2.new(0.75, 10, 0, 0)
+loadButton.ZIndex = 53
+loadButton.Parent = inputRow
+
+local loadCorner = Instance.new("UICorner")
+loadCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+loadCorner.Parent = loadButton
+
+-- Baris tombol Delete
+local deleteRow = Instance.new("Frame")
+deleteRow.Name = "DeleteRow"
+deleteRow.BackgroundTransparency = 1
+deleteRow.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+deleteRow.LayoutOrder = 6
+deleteRow.ZIndex = 52
+deleteRow.Parent = addSection
+
+local deleteLayout = Instance.new("UIListLayout")
+deleteLayout.FillDirection = Enum.FillDirection.Horizontal
+deleteLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+deleteLayout.Padding = UDim.new(0, cfg.padding)
+deleteLayout.Parent = deleteRow
+
+-- Tombol Delete Selected (WARNA LEBIH CERAH)
+local deleteSelectedButton = Instance.new("TextButton")
+deleteSelectedButton.Name = "DeleteSelectedButton"
+deleteSelectedButton.Text = "DELETE SELECTED"
+deleteSelectedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+deleteSelectedButton.TextSize = cfg.fontSizeMedium
+deleteSelectedButton.Font = Enum.Font.GothamBold
+deleteSelectedButton.BackgroundColor3 = Color3.fromRGB(220, 80, 80) -- Merah cerah
+deleteSelectedButton.Size = UDim2.new(0.48, 0, 1, 0)
+deleteSelectedButton.LayoutOrder = 1
+deleteSelectedButton.ZIndex = 53
+deleteSelectedButton.Parent = deleteRow
+
+local deleteSelectedCorner = Instance.new("UICorner")
+deleteSelectedCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+deleteSelectedCorner.Parent = deleteSelectedButton
+
+-- Tombol Delete All (WARNA LEBIH CERAH)
+local deleteAllButton = Instance.new("TextButton")
+deleteAllButton.Name = "DeleteAllButton"
+deleteAllButton.Text = "DELETE ALL"
+deleteAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+deleteAllButton.TextSize = cfg.fontSizeMedium
+deleteAllButton.Font = Enum.Font.GothamBold
+deleteAllButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Merah cerah
+deleteAllButton.Size = UDim2.new(0.48, 0, 1, 0)
+deleteAllButton.LayoutOrder = 2
+deleteAllButton.ZIndex = 53
+deleteAllButton.Parent = deleteRow
+
+local deleteAllCorner = Instance.new("UICorner")
+deleteAllCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+deleteAllCorner.Parent = deleteAllButton
+
+-- ========== FUNGSI UTAMA ==========
+-- Fungsi untuk update posisi realtime
+local function updatePositionDisplay()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        local pos = hrp.Position
+        positionLabel.Text = string.format("Position: X:%.0f Y:%.0f Z:%.0f", pos.X, pos.Y, pos.Z)
+    end
+end
+
+-- Loop update posisi realtime
+RunService.Heartbeat:Connect(function()
+    updatePositionDisplay()
+end)
+
+-- Fungsi untuk parse koordinat dari berbagai format
+local function parseCoordinates(inputText)
+    -- Bersihkan input
+    local text = inputText:gsub("%s+", " "):gsub(",", " "):gsub(";", " "):gsub(":", " "):gsub("X", ""):gsub("Y", ""):gsub("Z", "")
+    text = text:match("^%s*(.-)%s*$") -- Trim whitespace
+    
+    -- Cari angka dalam string
+    local numbers = {}
+    for num in text:gmatch("[-+]?%d+%.?%d*") do
+        table.insert(numbers, tonumber(num))
+    end
+    
+    if #numbers >= 3 then
+        return Vector3.new(numbers[1], numbers[2], numbers[3])
+    end
+    
+    return nil
+end
+
+-- Fungsi untuk toggle select/unselect checkpoint
+local function toggleCheckpointSelection(index)
+    if selectedCheckpoints[index] then
+        -- Unselect
+        selectedCheckpoints[index] = nil
+        return false
+    else
+        -- Select
+        selectedCheckpoints[index] = true
+        return true
+    end
+end
+
+-- Fungsi untuk menambahkan checkpoint ke daftar
+local function addCheckpointToUI(checkpointName, position, index)
+    local checkpointFrame = Instance.new("Frame")
+    checkpointFrame.Name = "Checkpoint" .. index
+    checkpointFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+    checkpointFrame.Size = UDim2.new(1, 0, 0, 45)
+    checkpointFrame.LayoutOrder = index
+    checkpointFrame.ZIndex = 53
+    checkpointFrame.Parent = scrollContainer
+    
+    local checkpointCorner = Instance.new("UICorner")
+    checkpointCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+    checkpointCorner.Parent = checkpointFrame
+    
+    local checkpointNameLabel = Instance.new("TextLabel")
+    checkpointNameLabel.Name = "Name"
+    checkpointNameLabel.Text = checkpointName
+    checkpointNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    checkpointNameLabel.TextSize = cfg.fontSizeMedium
+    checkpointNameLabel.Font = Enum.Font.GothamSemibold
+    checkpointNameLabel.BackgroundTransparency = 1
+    checkpointNameLabel.Size = UDim2.new(0.3, -10, 1, 0)
+    checkpointNameLabel.Position = UDim2.new(0, 10, 0, 0)
+    checkpointNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    checkpointNameLabel.ZIndex = 54
+    checkpointNameLabel.Parent = checkpointFrame
+    
+    local positionLabel = Instance.new("TextLabel")
+    positionLabel.Name = "Position"
+    positionLabel.Text = string.format("X:%.0f Y:%.0f Z:%.0f", position.X, position.Y, position.Z)
+    positionLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+    positionLabel.TextSize = cfg.fontSizeSmall
+    positionLabel.Font = Enum.Font.Gotham
+    positionLabel.BackgroundTransparency = 1
+    positionLabel.Size = UDim2.new(0.3, -10, 0.5, 0)
+    positionLabel.Position = UDim2.new(0, 10, 0.5, 0)
+    positionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    positionLabel.ZIndex = 54
+    positionLabel.Parent = checkpointFrame
+    
+    -- Container untuk tombol aksi
+    local buttonContainer = Instance.new("Frame")
+    buttonContainer.Name = "ButtonContainer"
+    buttonContainer.BackgroundTransparency = 1
+    buttonContainer.Size = UDim2.new(0.4, 0, 1, 0)
+    buttonContainer.Position = UDim2.new(0.6, 0, 0, 0)
+    buttonContainer.ZIndex = 54
+    buttonContainer.Parent = checkpointFrame
+    
+    local buttonLayout = Instance.new("UIListLayout")
+    buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+    buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    buttonLayout.Padding = UDim.new(0, 5)
+    buttonLayout.Parent = buttonContainer
+    
+    -- Tombol Teleport
+    local teleportButton = Instance.new("TextButton")
+    teleportButton.Name = "Teleport"
+    teleportButton.Text = "TP"
+    teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    teleportButton.TextSize = cfg.fontSizeSmall
+    teleportButton.Font = Enum.Font.GothamBold
+    teleportButton.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
+    teleportButton.Size = UDim2.new(0, 35, 0, 35)
+    teleportButton.LayoutOrder = 1
+    teleportButton.ZIndex = 55
+    teleportButton.Parent = buttonContainer
+    
+    local teleportCorner = Instance.new("UICorner")
+    teleportCorner.CornerRadius = UDim.new(0, 6)
+    teleportCorner.Parent = teleportButton
+    
+    -- Tombol Copy
+    local copyButton = Instance.new("TextButton")
+    copyButton.Name = "Copy"
+    copyButton.Text = "COPY"
+    copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    copyButton.TextSize = cfg.fontSizeSmall
+    copyButton.Font = Enum.Font.GothamBold
+    copyButton.BackgroundColor3 = Color3.fromRGB(120, 120, 180)
+    copyButton.Size = UDim2.new(0, 55, 0, 35)
+    copyButton.LayoutOrder = 2
+    copyButton.ZIndex = 55
+    copyButton.Parent = buttonContainer
+    
+    local copyCorner = Instance.new("UICorner")
+    copyCorner.CornerRadius = UDim.new(0, 6)
+    copyCorner.Parent = copyButton
+    
+    -- Tombol Delete
+    local deleteButton = Instance.new("TextButton")
+    deleteButton.Name = "Delete"
+    deleteButton.Text = "DEL"
+    deleteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    deleteButton.TextSize = cfg.fontSizeSmall
+    deleteButton.Font = Enum.Font.GothamBold
+    deleteButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+    deleteButton.Size = UDim2.new(0, 35, 0, 35)
+    deleteButton.LayoutOrder = 3
+    deleteButton.ZIndex = 55
+    deleteButton.Parent = buttonContainer
+    
+    local deleteCorner = Instance.new("UICorner")
+    deleteCorner.CornerRadius = UDim.new(0, 6)
+    deleteCorner.Parent = deleteButton
+    
+    -- Fungsi untuk memilih checkpoint
+    checkpointFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            local isSelected = toggleCheckpointSelection(index)
+            
+            if isSelected then
+                -- Set warna checkpoint yang dipilih menjadi hijau
+                checkpointFrame.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+            else
+                -- Kembalikan warna checkpoint ke semula
+                checkpointFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+            end
+        end
+    end)
+    
+    -- Fungsi teleport ke checkpoint
+    local function teleportToCheckpoint()
+        if isTeleporting then return end
+        isTeleporting = true
+        
+        -- Teleport player ke posisi checkpoint
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            hrp.CFrame = CFrame.new(position)
+            
+            -- Cooldown
+            teleportButton.Text = "CD"
+            teleportButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+            
+            -- Reset setelah cooldown
+            spawn(function()
+                wait(teleportCooldown)
+                teleportButton.Text = "TP"
+                teleportButton.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
+                isTeleporting = false
+            end)
+        end
+    end
+    
+    -- Fungsi tombol teleport
+    teleportButton.MouseButton1Click:Connect(function()
+        teleportToCheckpoint()
+    end)
+    
+    -- Fungsi tombol copy (copy single checkpoint)
+    copyButton.MouseButton1Click:Connect(function()
+        local text = string.format("X%.0f Y%.0f Z%.0f", position.X, position.Y, position.Z)
+        setclipboard(text)
+        
+        -- Feedback visual
+        local originalColor = copyButton.BackgroundColor3
+        copyButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        copyButton.Text = "COPIED!"
+        
+        spawn(function()
+            wait(1)
+            copyButton.BackgroundColor3 = originalColor
+            copyButton.Text = "COPY"
+        end)
+    end)
+    
+    -- Fungsi tombol delete
+    deleteButton.MouseButton1Click:Connect(function()
+        -- Hapus dari daftar
+        table.remove(savedCheckpoints, index)
+        
+        -- Update selectedCheckpoints
+        local newSelected = {}
+        for oldIndex, selected in pairs(selectedCheckpoints) do
+            if oldIndex < index then
+                newSelected[oldIndex] = true
+            elseif oldIndex > index then
+                newSelected[oldIndex - 1] = true
+            end
+        end
+        selectedCheckpoints = newSelected
+        
+        -- Hapus UI
+        checkpointFrame:Destroy()
+        
+        -- Update semua checkpoint setelahnya
+        local i = 1
+        for _, child in ipairs(scrollContainer:GetChildren()) do
+            if child:IsA("Frame") and child.Name:find("Checkpoint") then
+                child.LayoutOrder = i
+                child.Name = "Checkpoint" .. i
+                i = i + 1
+            end
+        end
+        
+        -- Update canvas size
+        scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 50)
+    end)
+    
+    -- Update canvas size
+    scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 50)
+    
+    return teleportToCheckpoint
+end
+
+-- Fungsi untuk menyimpan checkpoint
+local function saveCheckpoint(position)
+    local checkpointName = "Checkpoint " .. (#savedCheckpoints + 1)
+    table.insert(savedCheckpoints, {name = checkpointName, position = position})
+    addCheckpointToUI(checkpointName, position, #savedCheckpoints)
+end
+
+-- Fungsi untuk mendapatkan daftar checkpoint yang akan di-teleport
+local function getTeleportSequence()
+    local sequence = {}
+    
+    -- Cek apakah ada checkpoint yang dipilih
+    local hasSelected = false
+    for _ in pairs(selectedCheckpoints) do
+        hasSelected = true
+        break
+    end
+    
+    if hasSelected then
+        -- Gunakan checkpoint yang dipilih
+        for index in pairs(selectedCheckpoints) do
+            if savedCheckpoints[index] then
+                table.insert(sequence, index)
+            end
+        end
+        -- Urutkan sequence
+        table.sort(sequence)
+    else
+        -- Gunakan semua checkpoint
+        for i = 1, #savedCheckpoints do
+            table.insert(sequence, i)
+        end
+    end
+    
+    return sequence
+end
+
+-- Fungsi untuk merespawn karakter
+local function respawnCharacter()
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            -- Matikan karakter untuk respawn
+            humanoid.Health = 0
+            
+            -- Tunggu karakter respawn
+            local maxWaitTime = 5
+            local waited = 0
+            
+            while waited < maxWaitTime do
+                wait(0.5)
+                waited = waited + 0.5
+                
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local newHumanoid = player.Character:FindFirstChild("Humanoid")
+                    if newHumanoid and newHumanoid.Health > 0 then
+                        return true  -- Respawn berhasil
+                    end
+                end
+            end
+            
+            return false  -- Timeout
+        end
+    end
+    return false
+end
+
+-- Fungsi untuk menjalankan sequence teleport
+local function runTeleportSequence()
+    if #savedCheckpoints == 0 or teleportSequenceActive then return end
+    
+    teleportSequenceActive = true
+    startButton.Text = "STOP"
+    startButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+    
+    local sequence = getTeleportSequence()
+    
+    spawn(function()
+        local i = 1
+        local shouldContinue = true
+        
+        while teleportSequenceActive and shouldContinue and i <= #sequence do
+            local checkpointIndex = sequence[i]
+            local checkpoint = savedCheckpoints[checkpointIndex]
+            
+            if checkpoint and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.CFrame = CFrame.new(checkpoint.position)
+                
+                -- Tunggu cooldown sebelum ke checkpoint berikutnya
+                wait(teleportCooldown)
+                
+                i = i + 1
+                
+                -- Jika sudah sampai akhir
+                if i > #sequence then
+                    -- Jika respawn aktif
+                    if respawnEnabled then
+                        -- Respawn karakter
+                        local respawnSuccess = respawnCharacter()
+                        
+                        if respawnSuccess then
+                            -- Jika loop aktif, mulai dari awal
+                            if loopEnabled then
+                                i = 1
+                                -- Tunggu sebentar setelah respawn
+                                wait(1)
+                            else
+                                -- Teleport ke checkpoint pertama setelah respawn
+                                if savedCheckpoints[1] then
+                                    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                                        player.Character.HumanoidRootPart.CFrame = CFrame.new(savedCheckpoints[1].position)
+                                    end
+                                end
+                                break
+                            end
+                        else
+                            break  -- Respawn gagal
+                        end
+                    -- Jika loop aktif tanpa respawn
+                    elseif loopEnabled then
+                        i = 1
+                    else
+                        break
+                    end
+                end
+            else
+                break
+            end
+        end
+        
+        teleportSequenceActive = false
+        startButton.Text = "START TELEPORT"
+        startButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    end)
+end
+
+-- ========== EVENT HANDLERS ==========
+-- Fungsi untuk menyalin semua checkpoint yang dipilih
+copySelectedButton.MouseButton1Click:Connect(function()
+    -- Cek apakah ada yang dipilih
+    local hasSelected = false
+    for _ in pairs(selectedCheckpoints) do
+        hasSelected = true
+        break
+    end
+    
+    if hasSelected then
+        local text = ""
+        local count = 0
+        
+        -- Kumpulkan semua checkpoint yang dipilih
+        for index in pairs(selectedCheckpoints) do
+            if savedCheckpoints[index] then
+                local pos = savedCheckpoints[index].position
+                text = text .. string.format("X%.0f Y%.0f Z%.0f\n", pos.X, pos.Y, pos.Z)
+                count = count + 1
+            end
+        end
+        
+        -- Salin ke clipboard
+        if text ~= "" then
+            setclipboard(text)
+            
+            -- Feedback visual
+            local originalColor = copySelectedButton.BackgroundColor3
+            copySelectedButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+            copySelectedButton.Text = "COPIED " .. count .. "!"
+            
+            spawn(function()
+                wait(1)
+                copySelectedButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+                copySelectedButton.Text = "COPY SELECTED"
+            end)
+        end
+    else
+        -- Feedback jika tidak ada yang dipilih
+        local originalColor = copySelectedButton.BackgroundColor3
+        copySelectedButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+        copySelectedButton.Text = "NONE SELECTED!"
+        
+        spawn(function()
+            wait(1)
+            copySelectedButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
+            copySelectedButton.Text = "COPY SELECTED"
+        end)
+    end
+end)
+
+-- Fungsi untuk menyimpan posisi saat ini
+saveButton.MouseButton1Click:Connect(function()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        local pos = hrp.Position
+        saveCheckpoint(pos)
+        
+        -- Feedback visual
+        local originalColor = saveButton.BackgroundColor3
+        saveButton.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
+        saveButton.Text = "SAVED!"
+        
+        spawn(function()
+            wait(1)
+            saveButton.BackgroundColor3 = originalColor
+            saveButton.Text = "SAVE CHECKPOINT"
+        end)
+    end
+end)
+
+-- Fungsi untuk tombol Start/Stop
+startButton.MouseButton1Click:Connect(function()
+    if teleportSequenceActive then
+        -- Stop sequence
+        teleportSequenceActive = false
+        startButton.Text = "START TELEPORT"
+        startButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    else
+        -- Start sequence
+        runTeleportSequence()
+    end
+end)
+
+-- Fungsi untuk toggle loop
+loopButton.MouseButton1Click:Connect(function()
+    loopEnabled = not loopEnabled
+    
+    if loopEnabled then
+        loopButton.Text = "LOOP: ON"
+        loopButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    else
+        loopButton.Text = "LOOP: OFF"
+        loopButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
+end)
+
+-- Fungsi untuk toggle respawn
+respawnButton.MouseButton1Click:Connect(function()
+    respawnEnabled = not respawnEnabled
+    
+    if respawnEnabled then
+        respawnButton.Text = "RESPAWN: ON"
+        respawnButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
+    else
+        respawnButton.Text = "RESPAWN: OFF"
+        respawnButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    end
+end)
+
+-- Fungsi untuk dropdown cooldown
+cooldownDropdown.MouseButton1Click:Connect(function()
+    dropdownFrame.Visible = not dropdownFrame.Visible
+end)
+
+-- Tutup dropdown ketika klik di luar
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if dropdownFrame.Visible then
+            local mousePos = UserInputService:GetMouseLocation()
+            local framePos = dropdownFrame.AbsolutePosition
+            local frameSize = dropdownFrame.AbsoluteSize
+            
+            if mousePos.X < framePos.X or mousePos.X > framePos.X + frameSize.X or
+               mousePos.Y < framePos.Y or mousePos.Y > framePos.Y + frameSize.Y then
+                dropdownFrame.Visible = false
+            end
+        end
+    end
+end)
+
+-- Fungsi untuk load dari input multi-line
+loadButton.MouseButton1Click:Connect(function()
+    local inputText = coordinateInput.Text
+    if inputText and inputText ~= "" then
+        local lines = {}
+        
+        -- Pisahkan teks per baris
+        for line in inputText:gmatch("[^\r\n]+") do
+            if line:match("%S") then  -- Hanya baris yang tidak kosong
+                table.insert(lines, line)
+            end
+        end
+        
+        local successCount = 0
+        local errorCount = 0
+        
+        -- Proses setiap baris
+        for _, line in ipairs(lines) do
+            local position = parseCoordinates(line)
+            
+            if position then
+                saveCheckpoint(position)
+                successCount = successCount + 1
+            else
+                errorCount = errorCount + 1
+            end
+        end
+        
+        -- Clear input
+        coordinateInput.Text = ""
+        
+        -- Feedback visual
+        local originalColor = loadButton.BackgroundColor3
+        if successCount > 0 then
+            loadButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+            loadButton.Text = "LOADED " .. successCount .. "!"
+        else
+            loadButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+            loadButton.Text = "INVALID!"
+        end
+        
+        spawn(function()
+            wait(1)
+            loadButton.BackgroundColor3 = originalColor
+            loadButton.Text = "LOAD"
+        end)
+    end
+end)
+
+-- Fungsi untuk delete selected
+deleteSelectedButton.MouseButton1Click:Connect(function()
+    -- Cek apakah ada yang dipilih
+    local hasSelected = false
+    for _ in pairs(selectedCheckpoints) do
+        hasSelected = true
+        break
+    end
+    
+    if hasSelected then
+        -- Hapus checkpoint yang dipilih dalam urutan terbalik
+        local indexesToDelete = {}
+        for index in pairs(selectedCheckpoints) do
+            table.insert(indexesToDelete, index)
+        end
+        
+        -- Urutkan terbalik agar penghapusan tidak mengacaukan index
+        table.sort(indexesToDelete, function(a, b) return a > b end)
+        
+        local deleteCount = 0
+        for _, index in ipairs(indexesToDelete) do
+            if savedCheckpoints[index] then
+                table.remove(savedCheckpoints, index)
+                deleteCount = deleteCount + 1
+            end
+        end
+        
+        -- Hapus semua UI checkpoint
+        for _, child in ipairs(scrollContainer:GetChildren()) do
+            if child:IsA("Frame") and child.Name:find("Checkpoint") then
+                child:Destroy()
+            end
+        end
+        
+        -- Reset selected
+        selectedCheckpoints = {}
+        
+        -- Buat ulang semua checkpoint
+        for i, checkpoint in ipairs(savedCheckpoints) do
+            addCheckpointToUI(checkpoint.name, checkpoint.position, i)
+        end
+        
+        -- Feedback visual
+        local originalColor = deleteSelectedButton.BackgroundColor3
+        deleteSelectedButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        deleteSelectedButton.Text = "DELETED " .. deleteCount .. "!"
+        
+        spawn(function()
+            wait(1)
+            deleteSelectedButton.BackgroundColor3 = originalColor
+            deleteSelectedButton.Text = "DELETE SELECTED"
+        end)
+    end
+end)
+
+-- Fungsi untuk delete all
+deleteAllButton.MouseButton1Click:Connect(function()
+    if #savedCheckpoints > 0 then
+        -- Kosongkan daftar
+        local deleteCount = #savedCheckpoints
+        savedCheckpoints = {}
+        selectedCheckpoints = {}
+        
+        -- Hapus semua UI checkpoint
+        for _, child in ipairs(scrollContainer:GetChildren()) do
+            if child:IsA("Frame") and child.Name:find("Checkpoint") then
+                child:Destroy()
+            end
+        end
+        
+        -- Reset canvas size
+        scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+        
+        -- Feedback visual
+        local originalColor = deleteAllButton.BackgroundColor3
+        deleteAllButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        deleteAllButton.Text = "DELETED " .. deleteCount .. "!"
+        
+        spawn(function()
+            wait(1)
+            deleteAllButton.BackgroundColor3 = originalColor
+            deleteAllButton.Text = "DELETE ALL"
+        end)
+    end
+end)
+
+-- Fungsi untuk toggle GUI visibility
+toggleButton.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    mainFrame.Visible = guiVisible
+    toggleButton.Text = guiVisible and "📱 TP" or "📱 TP"
+end)
+
+-- ========== FUNGSI CLOSE YANG MENGHAPUS SEMUA ==========
+closeButton.MouseButton1Click:Connect(function()
+    -- Hapus seluruh GUI termasuk toggle button
+    screenGui:Destroy()
+    
+    -- Hentikan semua proses
+    teleportSequenceActive = false
+    loopEnabled = false
+    isTeleporting = false
+    respawnEnabled = false
+end)
+
+-- Auto-detect paste dari clipboard
+coordinateInput.Focused:Connect(function()
+    -- Coba paste otomatis dari clipboard saat input difokuskan
+    spawn(function()
+        wait(0.1)
+        if coordinateInput:IsFocused() then
+            pcall(function()
+                local clipboardText = tostring(getclipboard())
+                if clipboardText and clipboardText ~= "" then
+                    -- Cek jika teks clipboard mengandung angka (mungkin koordinat)
+                    if clipboardText:match("%d") then
+                        coordinateInput.Text = clipboardText
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+-- Update posisi awal
+updatePositionDisplay()
+
+-- Tambahkan beberapa checkpoint contoh
+spawn(function()
+    wait(1)
+    saveCheckpoint(Vector3.new(-2164, 588, -3632))
+    saveCheckpoint(Vector3.new(-2166, 588, -3631))
+    saveCheckpoint(Vector3.new(-2150, 588, -3620))
+end)
+
+-- Pasang GUI ke player
+screenGui.Parent = player.PlayerGui
+
+-- Notifikasi
+StarterGui:SetCore("SendNotification", {
+    Title = "NANAO Teleport GUI Loaded",
+    Text = "Click TP button to open menu",
+    Duration = 3,
+    Icon = "rbxassetid://6031075938"
+})
