@@ -43,7 +43,7 @@ local isMobile = deviceType == "MOBILE"
 local isTablet = deviceType == "TABLET"
 local isPC = deviceType == "PC"
 
--- Konfigurasi berdasarkan perangkat
+-- KONFIGURASI DIUBAH: Ukuran lebih kecil untuk HP
 local config = {
     PC = {
         guiSize = UDim2.new(0, 380, 0, 620),
@@ -53,17 +53,20 @@ local config = {
         fontSizeLarge = 16,
         scrollbarThickness = 4,
         cornerRadius = 8,
-        padding = 10
+        padding = 10,
+        toggleSize = UDim2.new(0, 80, 0, 50)
     },
     MOBILE = {
-        guiSize = UDim2.new(0, 350, 0, 600),
-        buttonHeight = 45,
-        fontSizeSmall = 14,
-        fontSizeMedium = 16,
-        fontSizeLarge = 18,
-        scrollbarThickness = 8,
-        cornerRadius = 10,
-        padding = 12
+        -- UKURAN DIKECILKAN untuk HP
+        guiSize = UDim2.new(0, 300, 0, 450),  -- Dikurangi dari 350x600
+        buttonHeight = 38,  -- Dikurangi dari 45
+        fontSizeSmall = 11,  -- Dikurangi
+        fontSizeMedium = 13,  -- Dikurangi
+        fontSizeLarge = 15,  -- Dikurangi
+        scrollbarThickness = 6,
+        cornerRadius = 8,
+        padding = 8,  -- Dikurangi
+        toggleSize = UDim2.new(0, 60, 0, 45)  -- Tombol toggle lebih kecil
     },
     TABLET = {
         guiSize = UDim2.new(0, 400, 0, 650),
@@ -73,7 +76,8 @@ local config = {
         fontSizeLarge = 17,
         scrollbarThickness = 6,
         cornerRadius = 10,
-        padding = 12
+        padding = 12,
+        toggleSize = UDim2.new(0, 70, 0, 50)
     }
 }
 
@@ -84,7 +88,7 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NANAOTeleportGUI"
 screenGui.ResetOnSpawn = false
 
--- Tombol toggle untuk membuka GUI (draggable)
+-- Tombol toggle untuk membuka GUI (draggable) - UKURAN DIKECILKAN untuk HP
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
 toggleButton.Text = "📱"
@@ -92,17 +96,17 @@ toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.TextSize = cfg.fontSizeLarge
 toggleButton.Font = Enum.Font.GothamBold
 toggleButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
-toggleButton.Size = UDim2.new(0, 80, 0, 50)
-toggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+toggleButton.Size = cfg.toggleSize  -- Pakai ukuran dari config
+toggleButton.Position = UDim2.new(0, 10, 0.5, -cfg.toggleSize.Y.Offset/2)
 toggleButton.Visible = true
 toggleButton.ZIndex = 100
 toggleButton.Parent = screenGui
 
 local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 12)
+toggleCorner.CornerRadius = UDim.new(0, 10)
 toggleCorner.Parent = toggleButton
 
--- Frame utama (Bubble GUI) - awalnya hidden
+-- Frame utama (Bubble GUI) - awalnya hidden - UKURAN DIKECILKAN
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
@@ -117,7 +121,7 @@ mainFrame.Parent = screenGui
 
 -- Bubble effect dengan rounded corners
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 20)
+corner.CornerRadius = UDim.new(0, 15)  -- Dikurangi dari 20
 corner.Parent = mainFrame
 
 -- Shadow effect
@@ -203,25 +207,25 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Header dengan tombol close
+-- Header dengan tombol close - UKURAN DIKECILKAN
 local header = Instance.new("Frame")
 header.Name = "Header"
 header.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-header.Size = UDim2.new(1, 0, 0, 50)
+header.Size = UDim2.new(1, 0, 0, 40)  -- Dikurangi dari 50
 header.BorderSizePixel = 0
 header.ZIndex = 51
 header.Parent = mainFrame
 
 local headerCorner = Instance.new("UICorner")
-headerCorner.CornerRadius = UDim.new(0, 20)
+headerCorner.CornerRadius = UDim.new(0, 15)
 headerCorner.Parent = header
 
--- Judul
+-- Judul - FONT DIKECILKAN
 local title = Instance.new("TextLabel")
 title.Name = "Title"
 title.Text = "NANAO SAVE TELEPORT"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.TextSize = cfg.fontSizeLarge
+title.TextSize = cfg.fontSizeMedium  -- Pakai medium, bukan large
 title.Font = Enum.Font.GothamBold
 title.BackgroundTransparency = 1
 title.Size = UDim2.new(0.7, 0, 1, 0)
@@ -229,31 +233,31 @@ title.Position = UDim2.new(0.15, 0, 0, 0)
 title.ZIndex = 52
 title.Parent = header
 
--- Tombol close (pojok kanan)
+-- Tombol close (pojok kanan) - UKURAN DIKECILKAN
 local closeButton = Instance.new("TextButton")
 closeButton.Name = "CloseButton"
 closeButton.Text = "✕"
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = cfg.fontSizeLarge
+closeButton.TextSize = cfg.fontSizeMedium  -- Dikurangi
 closeButton.Font = Enum.Font.GothamBold
 closeButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-closeButton.Size = UDim2.new(0, 40, 0, 40)
-closeButton.Position = UDim2.new(1, -45, 0.5, -20)
+closeButton.Size = UDim2.new(0, 35, 0, 35)  -- Dikurangi
+closeButton.Position = UDim2.new(1, -40, 0.5, -17.5)
 closeButton.ZIndex = 52
 closeButton.Parent = header
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 8)
+closeCorner.CornerRadius = UDim.new(0, 6)  -- Dikurangi
 closeCorner.Parent = closeButton
 
 header.Parent = mainFrame
 
--- Container untuk konten
+-- Container untuk konten - UKURAN DIKECILKAN
 local contentContainer = Instance.new("Frame")
 contentContainer.Name = "ContentContainer"
 contentContainer.BackgroundTransparency = 1
-contentContainer.Size = UDim2.new(1, 0, 1, -60)
-contentContainer.Position = UDim2.new(0, 0, 0, 55)
+contentContainer.Size = UDim2.new(1, 0, 1, -45)  -- Disesuaikan
+contentContainer.Position = UDim2.new(0, 0, 0, 40)  -- Disesuaikan
 contentContainer.Visible = true
 contentContainer.ZIndex = 51
 contentContainer.Parent = mainFrame
@@ -265,39 +269,39 @@ mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
 mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 mainLayout.Parent = contentContainer
 
--- Bagian SAVED CHECKPOINTS
+-- Bagian SAVED CHECKPOINTS - UKURAN DIKECILKAN
 local savedSection = Instance.new("Frame")
 savedSection.Name = "SavedSection"
 savedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 savedSection.BackgroundTransparency = 0
-savedSection.Size = UDim2.new(0.95, 0, 0, 200)
+savedSection.Size = UDim2.new(0.95, 0, 0, 150)  -- Dikurangi dari 200
 savedSection.LayoutOrder = 1
 savedSection.ZIndex = 51
 savedSection.Parent = contentContainer
 
 local savedCorner = Instance.new("UICorner")
-savedCorner.CornerRadius = UDim.new(0, 12)
+savedCorner.CornerRadius = UDim.new(0, 10)  -- Dikurangi
 savedCorner.Parent = savedSection
 
--- Judul Saved Checkpoints
+-- Judul Saved Checkpoints - FONT DIKECILKAN
 local savedTitle = Instance.new("TextLabel")
 savedTitle.Name = "SavedTitle"
 savedTitle.Text = "SAVED CHECKPOINTS"
 savedTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
-savedTitle.TextSize = cfg.fontSizeMedium
+savedTitle.TextSize = cfg.fontSizeSmall  -- Pakai small, bukan medium
 savedTitle.Font = Enum.Font.GothamBold
 savedTitle.BackgroundTransparency = 1
-savedTitle.Size = UDim2.new(1, 0, 0, 30)
-savedTitle.Position = UDim2.new(0, 0, 0, 5)
+savedTitle.Size = UDim2.new(1, 0, 0, 25)  -- Dikurangi
+savedTitle.Position = UDim2.new(0, 0, 0, 3)  -- Dikurangi
 savedTitle.ZIndex = 52
 savedTitle.Parent = savedSection
 
--- Scroll container untuk daftar checkpoint
+-- Scroll container untuk daftar checkpoint - UKURAN DIKECILKAN
 local scrollContainer = Instance.new("ScrollingFrame")
 scrollContainer.Name = "ScrollContainer"
 scrollContainer.BackgroundTransparency = 1
-scrollContainer.Size = UDim2.new(0.95, 0, 0, 160)
-scrollContainer.Position = UDim2.new(0.025, 0, 0, 35)
+scrollContainer.Size = UDim2.new(0.95, 0, 0, 120)  -- Dikurangi dari 160
+scrollContainer.Position = UDim2.new(0.025, 0, 0, 28)  -- Disesuaikan
 scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollContainer.ScrollBarThickness = cfg.scrollbarThickness
 scrollContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
@@ -305,49 +309,49 @@ scrollContainer.ZIndex = 52
 scrollContainer.Parent = savedSection
 
 local checklistLayout = Instance.new("UIListLayout")
-checklistLayout.Padding = UDim.new(0, cfg.padding-2)
+checklistLayout.Padding = UDim.new(0, 4)  -- Dikurangi
 checklistLayout.SortOrder = Enum.SortOrder.LayoutOrder
 checklistLayout.Parent = scrollContainer
 
--- Bagian ADD CHECKPOINT
+-- Bagian ADD CHECKPOINT - UKURAN DIKECILKAN
 local addSection = Instance.new("Frame")
 addSection.Name = "AddSection"
 addSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 addSection.BackgroundTransparency = 0
-addSection.Size = UDim2.new(0.95, 0, 0, 340)
+addSection.Size = UDim2.new(0.95, 0, 0, 250)  -- DIKECILKAN DARI 340
 addSection.LayoutOrder = 2
 addSection.ZIndex = 51
 addSection.Parent = contentContainer
 
 local addCorner = Instance.new("UICorner")
-addCorner.CornerRadius = UDim.new(0, 12)
+addCorner.CornerRadius = UDim.new(0, 10)  -- Dikurangi
 addCorner.Parent = addSection
 
--- Judul Add Checkpoint
+-- Judul Add Checkpoint - FONT DIKECILKAN
 local addTitle = Instance.new("TextLabel")
 addTitle.Name = "AddTitle"
 addTitle.Text = "ADD CHECKPOINT"
 addTitle.TextColor3 = Color3.fromRGB(200, 200, 255)
-addTitle.TextSize = cfg.fontSizeMedium
+addTitle.TextSize = cfg.fontSizeSmall  -- Pakai small, bukan medium
 addTitle.Font = Enum.Font.GothamBold
 addTitle.BackgroundTransparency = 1
-addTitle.Size = UDim2.new(1, 0, 0, 25)
-addTitle.Position = UDim2.new(0, 0, 0, 5)
+addTitle.Size = UDim2.new(1, 0, 0, 20)  -- Dikurangi
+addTitle.Position = UDim2.new(0, 0, 0, 3)  -- Dikurangi
 addTitle.ZIndex = 52
 addTitle.Parent = addSection
 
 -- Layout untuk konten add section
 local addLayout = Instance.new("UIListLayout")
-addLayout.Padding = UDim.new(0, cfg.padding-2)
+addLayout.Padding = UDim.new(0, 4)  -- Dikurangi
 addLayout.SortOrder = Enum.SortOrder.LayoutOrder
 addLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 addLayout.Parent = addSection
 
--- Position display (real-time)
+-- Position display (real-time) - FONT DIKECILKAN
 local positionFrame = Instance.new("Frame")
 positionFrame.Name = "PositionFrame"
 positionFrame.BackgroundTransparency = 1
-positionFrame.Size = UDim2.new(0.9, 0, 0, 25)
+positionFrame.Size = UDim2.new(0.9, 0, 0, 20)  -- Dikurangi
 positionFrame.LayoutOrder = 1
 positionFrame.ZIndex = 52
 positionFrame.Parent = addSection
@@ -356,13 +360,13 @@ local positionLabel = Instance.new("TextLabel")
 positionLabel.Name = "PositionLabel"
 positionLabel.Text = "Position: X:0 Y:0 Z:0"
 positionLabel.TextColor3 = Color3.fromRGB(220, 220, 255)
-positionLabel.TextSize = cfg.fontSizeMedium
+positionLabel.TextSize = cfg.fontSizeSmall  -- Pakai small
 positionLabel.Font = Enum.Font.Gotham
 positionLabel.BackgroundTransparency = 1
 positionLabel.Size = UDim2.new(1, 0, 1, 0)
 positionLabel.Parent = positionFrame
 
--- Baris tombol Copy dan Save
+-- Baris tombol Copy dan Save - UKURAN DIKECILKAN
 local buttonRow1 = Instance.new("Frame")
 buttonRow1.Name = "ButtonRow1"
 buttonRow1.BackgroundTransparency = 1
@@ -374,15 +378,15 @@ buttonRow1.Parent = addSection
 local buttonLayout1 = Instance.new("UIListLayout")
 buttonLayout1.FillDirection = Enum.FillDirection.Horizontal
 buttonLayout1.HorizontalAlignment = Enum.HorizontalAlignment.Center
-buttonLayout1.Padding = UDim.new(0, cfg.padding)
+buttonLayout1.Padding = UDim.new(0, 6)  -- Dikurangi
 buttonLayout1.Parent = buttonRow1
 
--- Tombol Copy Selected Checkpoints
+-- Tombol Copy Selected Checkpoints - FONT DIKECILKAN
 local copySelectedButton = Instance.new("TextButton")
 copySelectedButton.Name = "CopySelectedButton"
 copySelectedButton.Text = "COPY SELECTED"
 copySelectedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-copySelectedButton.TextSize = cfg.fontSizeMedium
+copySelectedButton.TextSize = cfg.fontSizeSmall  -- Pakai small
 copySelectedButton.Font = Enum.Font.GothamBold
 copySelectedButton.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
 copySelectedButton.Size = UDim2.new(0.48, 0, 1, 0)
@@ -394,12 +398,12 @@ local copySelectedCorner = Instance.new("UICorner")
 copySelectedCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 copySelectedCorner.Parent = copySelectedButton
 
--- Tombol Save Checkpoint
+-- Tombol Save Checkpoint - FONT DIKECILKAN
 local saveButton = Instance.new("TextButton")
 saveButton.Name = "SaveButton"
 saveButton.Text = "SAVE CHECKPOINT"
 saveButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-saveButton.TextSize = cfg.fontSizeMedium
+saveButton.TextSize = cfg.fontSizeSmall  -- Pakai small
 saveButton.Font = Enum.Font.GothamBold
 saveButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
 saveButton.Size = UDim2.new(0.48, 0, 1, 0)
@@ -411,11 +415,11 @@ local saveCorner = Instance.new("UICorner")
 saveCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 saveCorner.Parent = saveButton
 
--- Baris tombol Start, Loop, Respawn
+-- Baris tombol Start, Loop, Respawn - UKURAN DIKECILKAN
 local buttonRow2 = Instance.new("Frame")
 buttonRow2.Name = "ButtonRow2"
 buttonRow2.BackgroundTransparency = 1
-buttonRow2.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+buttonRow2.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight-5)  -- Dikurangi
 buttonRow2.LayoutOrder = 3
 buttonRow2.ZIndex = 52
 buttonRow2.Parent = addSection
@@ -423,15 +427,15 @@ buttonRow2.Parent = addSection
 local buttonLayout2 = Instance.new("UIListLayout")
 buttonLayout2.FillDirection = Enum.FillDirection.Horizontal
 buttonLayout2.HorizontalAlignment = Enum.HorizontalAlignment.Center
-buttonLayout2.Padding = UDim.new(0, 5)
+buttonLayout2.Padding = UDim.new(0, 4)  -- Dikurangi
 buttonLayout2.Parent = buttonRow2
 
--- Tombol Start/Stop Teleport Sequence
+-- Tombol Start/Stop Teleport Sequence - FONT DIKECILKAN
 local startButton = Instance.new("TextButton")
 startButton.Name = "StartButton"
 startButton.Text = "START TELEPORT"
 startButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-startButton.TextSize = cfg.fontSizeSmall
+startButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil lagi
 startButton.Font = Enum.Font.GothamBold
 startButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120)
 startButton.Size = UDim2.new(0.32, 0, 1, 0)
@@ -443,12 +447,12 @@ local startCorner = Instance.new("UICorner")
 startCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 startCorner.Parent = startButton
 
--- Tombol Loop
+-- Tombol Loop - FONT DIKECILKAN
 local loopButton = Instance.new("TextButton")
 loopButton.Name = "LoopButton"
 loopButton.Text = "LOOP: OFF"
 loopButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-loopButton.TextSize = cfg.fontSizeSmall
+loopButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil lagi
 loopButton.Font = Enum.Font.GothamBold
 loopButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 loopButton.Size = UDim2.new(0.32, 0, 1, 0)
@@ -460,12 +464,12 @@ local loopCorner = Instance.new("UICorner")
 loopCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 loopCorner.Parent = loopButton
 
--- Tombol Respawn
+-- Tombol Respawn - FONT DIKECILKAN
 local respawnButton = Instance.new("TextButton")
 respawnButton.Name = "RespawnButton"
 respawnButton.Text = "RESPAWN: OFF"
 respawnButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-respawnButton.TextSize = cfg.fontSizeSmall
+respawnButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil lagi
 respawnButton.Font = Enum.Font.GothamBold
 respawnButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 respawnButton.Size = UDim2.new(0.32, 0, 1, 0)
@@ -477,11 +481,11 @@ local respawnCorner = Instance.new("UICorner")
 respawnCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 respawnCorner.Parent = respawnButton
 
--- Baris Cooldown Dropdown
+-- Baris Cooldown Dropdown - UKURAN DIKECILKAN
 local buttonRow3 = Instance.new("Frame")
 buttonRow3.Name = "ButtonRow3"
 buttonRow3.BackgroundTransparency = 1
-buttonRow3.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+buttonRow3.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight-8)  -- Dikurangi
 buttonRow3.LayoutOrder = 4
 buttonRow3.ZIndex = 52
 buttonRow3.Parent = addSection
@@ -489,7 +493,7 @@ buttonRow3.Parent = addSection
 local buttonLayout3 = Instance.new("UIListLayout")
 buttonLayout3.FillDirection = Enum.FillDirection.Horizontal
 buttonLayout3.HorizontalAlignment = Enum.HorizontalAlignment.Center
-buttonLayout3.Padding = UDim.new(0, cfg.padding)
+buttonLayout3.Padding = UDim.new(0, 6)  -- Dikurangi
 buttonLayout3.Parent = buttonRow3
 
 -- Cooldown container
@@ -501,12 +505,12 @@ cooldownContainer.LayoutOrder = 1
 cooldownContainer.ZIndex = 53
 cooldownContainer.Parent = buttonRow3
 
--- Label Cooldown
+-- Label Cooldown - FONT DIKECILKAN
 local cooldownLabel = Instance.new("TextLabel")
 cooldownLabel.Name = "CooldownLabel"
 cooldownLabel.Text = "COOLDOWN:"
 cooldownLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
-cooldownLabel.TextSize = cfg.fontSizeMedium
+cooldownLabel.TextSize = cfg.fontSizeSmall  -- Pakai small
 cooldownLabel.Font = Enum.Font.Gotham
 cooldownLabel.BackgroundTransparency = 1
 cooldownLabel.Size = UDim2.new(0.4, 0, 1, 0)
@@ -514,12 +518,12 @@ cooldownLabel.Position = UDim2.new(0, 0, 0, 0)
 cooldownLabel.TextXAlignment = Enum.TextXAlignment.Left
 cooldownLabel.Parent = cooldownContainer
 
--- Dropdown untuk cooldown
+-- Dropdown untuk cooldown - FONT DIKECILKAN
 local cooldownDropdown = Instance.new("TextButton")
 cooldownDropdown.Name = "CooldownDropdown"
 cooldownDropdown.Text = tostring(teleportCooldown) .. "s"
 cooldownDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-cooldownDropdown.TextSize = cfg.fontSizeMedium
+cooldownDropdown.TextSize = cfg.fontSizeSmall  -- Pakai small
 cooldownDropdown.Font = Enum.Font.GothamBold
 cooldownDropdown.BackgroundColor3 = Color3.fromRGB(80, 120, 200)
 cooldownDropdown.Size = UDim2.new(0.6, 0, 0.8, 0)
@@ -531,11 +535,11 @@ local dropdownCorner = Instance.new("UICorner")
 dropdownCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 dropdownCorner.Parent = cooldownDropdown
 
--- Frame untuk dropdown options
+-- Frame untuk dropdown options - UKURAN DIKECILKAN
 local dropdownFrame = Instance.new("Frame")
 dropdownFrame.Name = "DropdownFrame"
 dropdownFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-dropdownFrame.Size = UDim2.new(0.6, 0, 0, 200)
+dropdownFrame.Size = UDim2.new(0.6, 0, 0, 120)  -- Dikurangi dari 200
 dropdownFrame.Position = UDim2.new(0.4, 0, 1, 5)
 dropdownFrame.Visible = false
 dropdownFrame.ZIndex = 60
@@ -549,14 +553,14 @@ local dropdownScroll = Instance.new("ScrollingFrame")
 dropdownScroll.Name = "DropdownScroll"
 dropdownScroll.BackgroundTransparency = 1
 dropdownScroll.Size = UDim2.new(1, 0, 1, 0)
-dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 1000)
+dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 500)  -- Dikurangi
 dropdownScroll.ScrollBarThickness = cfg.scrollbarThickness
 dropdownScroll.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
 dropdownScroll.ZIndex = 61
 dropdownScroll.Parent = dropdownFrame
 
 local dropdownList = Instance.new("UIListLayout")
-dropdownList.Padding = UDim.new(0, 2)
+dropdownList.Padding = UDim.new(0, 1)  -- Dikurangi
 dropdownList.SortOrder = Enum.SortOrder.LayoutOrder
 dropdownList.Parent = dropdownScroll
 
@@ -566,17 +570,17 @@ for i = 1, 100 do
     optionButton.Name = "Option" .. i
     optionButton.Text = tostring(i) .. " seconds"
     optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    optionButton.TextSize = cfg.fontSizeSmall
+    optionButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
     optionButton.Font = Enum.Font.Gotham
     optionButton.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
-    optionButton.Size = UDim2.new(1, -10, 0, 30)
-    optionButton.Position = UDim2.new(0, 5, 0, (i-1)*32)
+    optionButton.Size = UDim2.new(1, -5, 0, 22)  -- Dikurangi
+    optionButton.Position = UDim2.new(0, 2.5, 0, (i-1)*23)  -- Dikurangi
     optionButton.ZIndex = 62
     optionButton.LayoutOrder = i
     optionButton.Parent = dropdownScroll
     
     local optionCorner = Instance.new("UICorner")
-    optionCorner.CornerRadius = UDim.new(0, 6)
+    optionCorner.CornerRadius = UDim.new(0, 4)  -- Dikurangi
     optionCorner.Parent = optionButton
     
     optionButton.MouseButton1Click:Connect(function()
@@ -586,19 +590,19 @@ for i = 1, 100 do
     end)
 end
 
--- Update canvas size dropdown
-dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 100 * 32)
+-- Update canvas size dropdown - DIKECILKAN
+dropdownScroll.CanvasSize = UDim2.new(0, 0, 0, 100 * 23)
 
--- Input coordinate multi-line dengan scrollable
+-- Input coordinate multi-line dengan scrollable - UKURAN DIKECILKAN
 local inputRow = Instance.new("Frame")
 inputRow.Name = "InputRow"
 inputRow.BackgroundTransparency = 1
-inputRow.Size = UDim2.new(0.9, 0, 0, 120)
+inputRow.Size = UDim2.new(0.9, 0, 0, 60)  -- DIKECILKAN DARI 120
 inputRow.LayoutOrder = 5
 inputRow.ZIndex = 52
 inputRow.Parent = addSection
 
--- ScrollingFrame untuk input
+-- ScrollingFrame untuk input - UKURAN DIKECILKAN
 local inputScroll = Instance.new("ScrollingFrame")
 inputScroll.Name = "InputScroll"
 inputScroll.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
@@ -614,17 +618,17 @@ local inputCorner = Instance.new("UICorner")
 inputCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 inputCorner.Parent = inputScroll
 
--- TextBox multi-line
+-- TextBox multi-line - FONT DIKECILKAN
 local coordinateInput = Instance.new("TextBox")
 coordinateInput.Name = "CoordinateInput"
 coordinateInput.PlaceholderText = "Paste Coordinates Here\nFormat: X Y Z\nOne coordinate per line"
 coordinateInput.Text = ""
 coordinateInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-coordinateInput.TextSize = cfg.fontSizeSmall
+coordinateInput.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
 coordinateInput.Font = Enum.Font.Gotham
 coordinateInput.BackgroundTransparency = 1
-coordinateInput.Size = UDim2.new(1, -10, 1, 0)
-coordinateInput.Position = UDim2.new(0, 5, 0, 5)
+coordinateInput.Size = UDim2.new(1, -5, 1, 0)  -- Dikurangi
+coordinateInput.Position = UDim2.new(0, 2.5, 0, 2.5)  -- Dikurangi
 coordinateInput.TextWrapped = true
 coordinateInput.TextXAlignment = Enum.TextXAlignment.Left
 coordinateInput.TextYAlignment = Enum.TextYAlignment.Top
@@ -632,7 +636,7 @@ coordinateInput.MultiLine = true
 coordinateInput.ZIndex = 54
 coordinateInput.Parent = inputScroll
 
--- Fungsi untuk update canvas size input
+-- Fungsi untuk update canvas size input - DIKECILKAN
 local function updateInputCanvasSize()
     local lineCount = 0
     for _ in coordinateInput.Text:gmatch("\n") do
@@ -640,8 +644,8 @@ local function updateInputCanvasSize()
     end
     lineCount = lineCount + 1
     
-    local minHeight = 100
-    local calculatedHeight = math.max(minHeight, lineCount * 20)
+    local minHeight = 60  -- Dikurangi
+    local calculatedHeight = math.max(minHeight, lineCount * 15)  -- Dikurangi
     inputScroll.CanvasSize = UDim2.new(0, 0, 0, calculatedHeight)
 end
 
@@ -649,16 +653,16 @@ coordinateInput:GetPropertyChangedSignal("Text"):Connect(function()
     updateInputCanvasSize()
 end)
 
--- Tombol Load
+-- Tombol Load - FONT DIKECILKAN
 local loadButton = Instance.new("TextButton")
 loadButton.Name = "LoadButton"
 loadButton.Text = "LOAD"
 loadButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-loadButton.TextSize = cfg.fontSizeMedium
+loadButton.TextSize = cfg.fontSizeSmall  -- Pakai small
 loadButton.Font = Enum.Font.GothamBold
 loadButton.BackgroundColor3 = Color3.fromRGB(180, 120, 80)
 loadButton.Size = UDim2.new(0.25, 0, 1, 0)
-loadButton.Position = UDim2.new(0.75, 10, 0, 0)
+loadButton.Position = UDim2.new(0.75, 5, 0, 0)  -- Dikurangi
 loadButton.ZIndex = 53
 loadButton.Parent = inputRow
 
@@ -666,11 +670,11 @@ local loadCorner = Instance.new("UICorner")
 loadCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 loadCorner.Parent = loadButton
 
--- Baris tombol Delete
+-- Baris tombol Delete - UKURAN DIKECILKAN
 local deleteRow = Instance.new("Frame")
 deleteRow.Name = "DeleteRow"
 deleteRow.BackgroundTransparency = 1
-deleteRow.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+deleteRow.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight-5)  -- Dikurangi
 deleteRow.LayoutOrder = 6
 deleteRow.ZIndex = 52
 deleteRow.Parent = addSection
@@ -678,17 +682,17 @@ deleteRow.Parent = addSection
 local deleteLayout = Instance.new("UIListLayout")
 deleteLayout.FillDirection = Enum.FillDirection.Horizontal
 deleteLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-deleteLayout.Padding = UDim.new(0, cfg.padding)
+deleteLayout.Padding = UDim.new(0, 6)  -- Dikurangi
 deleteLayout.Parent = deleteRow
 
--- Tombol Delete Selected (WARNA LEBIH CERAH)
+-- Tombol Delete Selected - FONT DIKECILKAN
 local deleteSelectedButton = Instance.new("TextButton")
 deleteSelectedButton.Name = "DeleteSelectedButton"
 deleteSelectedButton.Text = "DELETE SELECTED"
 deleteSelectedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-deleteSelectedButton.TextSize = cfg.fontSizeMedium
+deleteSelectedButton.TextSize = cfg.fontSizeSmall  -- Pakai small
 deleteSelectedButton.Font = Enum.Font.GothamBold
-deleteSelectedButton.BackgroundColor3 = Color3.fromRGB(220, 80, 80) -- Merah cerah
+deleteSelectedButton.BackgroundColor3 = Color3.fromRGB(220, 80, 80)
 deleteSelectedButton.Size = UDim2.new(0.48, 0, 1, 0)
 deleteSelectedButton.LayoutOrder = 1
 deleteSelectedButton.ZIndex = 53
@@ -698,14 +702,14 @@ local deleteSelectedCorner = Instance.new("UICorner")
 deleteSelectedCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 deleteSelectedCorner.Parent = deleteSelectedButton
 
--- Tombol Delete All (WARNA LEBIH CERAH)
+-- Tombol Delete All - FONT DIKECILKAN
 local deleteAllButton = Instance.new("TextButton")
 deleteAllButton.Name = "DeleteAllButton"
 deleteAllButton.Text = "DELETE ALL"
 deleteAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-deleteAllButton.TextSize = cfg.fontSizeMedium
+deleteAllButton.TextSize = cfg.fontSizeSmall  -- Pakai small
 deleteAllButton.Font = Enum.Font.GothamBold
-deleteAllButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Merah cerah
+deleteAllButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
 deleteAllButton.Size = UDim2.new(0.48, 0, 1, 0)
 deleteAllButton.LayoutOrder = 2
 deleteAllButton.ZIndex = 53
@@ -762,29 +766,29 @@ local function toggleCheckpointSelection(index)
     end
 end
 
--- Fungsi untuk menambahkan checkpoint ke daftar
+-- Fungsi untuk menambahkan checkpoint ke daftar - UKURAN DIKECILKAN
 local function addCheckpointToUI(checkpointName, position, index)
     local checkpointFrame = Instance.new("Frame")
     checkpointFrame.Name = "Checkpoint" .. index
     checkpointFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
-    checkpointFrame.Size = UDim2.new(1, 0, 0, 45)
+    checkpointFrame.Size = UDim2.new(1, 0, 0, 35)  -- DIKECILKAN DARI 45
     checkpointFrame.LayoutOrder = index
     checkpointFrame.ZIndex = 53
     checkpointFrame.Parent = scrollContainer
     
     local checkpointCorner = Instance.new("UICorner")
-    checkpointCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+    checkpointCorner.CornerRadius = UDim.new(0, 6)  -- Dikurangi
     checkpointCorner.Parent = checkpointFrame
     
     local checkpointNameLabel = Instance.new("TextLabel")
     checkpointNameLabel.Name = "Name"
     checkpointNameLabel.Text = checkpointName
     checkpointNameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    checkpointNameLabel.TextSize = cfg.fontSizeMedium
+    checkpointNameLabel.TextSize = cfg.fontSizeSmall  -- Pakai small
     checkpointNameLabel.Font = Enum.Font.GothamSemibold
     checkpointNameLabel.BackgroundTransparency = 1
-    checkpointNameLabel.Size = UDim2.new(0.3, -10, 1, 0)
-    checkpointNameLabel.Position = UDim2.new(0, 10, 0, 0)
+    checkpointNameLabel.Size = UDim2.new(0.3, -5, 1, 0)  -- Dikurangi
+    checkpointNameLabel.Position = UDim2.new(0, 5, 0, 0)  -- Dikurangi
     checkpointNameLabel.TextXAlignment = Enum.TextXAlignment.Left
     checkpointNameLabel.ZIndex = 54
     checkpointNameLabel.Parent = checkpointFrame
@@ -793,16 +797,16 @@ local function addCheckpointToUI(checkpointName, position, index)
     positionLabel.Name = "Position"
     positionLabel.Text = string.format("X:%.0f Y:%.0f Z:%.0f", position.X, position.Y, position.Z)
     positionLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
-    positionLabel.TextSize = cfg.fontSizeSmall
+    positionLabel.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
     positionLabel.Font = Enum.Font.Gotham
     positionLabel.BackgroundTransparency = 1
-    positionLabel.Size = UDim2.new(0.3, -10, 0.5, 0)
-    positionLabel.Position = UDim2.new(0, 10, 0.5, 0)
+    positionLabel.Size = UDim2.new(0.3, -5, 0.5, 0)
+    positionLabel.Position = UDim2.new(0, 5, 0.5, 0)
     positionLabel.TextXAlignment = Enum.TextXAlignment.Left
     positionLabel.ZIndex = 54
     positionLabel.Parent = checkpointFrame
     
-    -- Container untuk tombol aksi
+    -- Container untuk tombol aksi - UKURAN DIKECILKAN
     local buttonContainer = Instance.new("Frame")
     buttonContainer.Name = "ButtonContainer"
     buttonContainer.BackgroundTransparency = 1
@@ -814,58 +818,58 @@ local function addCheckpointToUI(checkpointName, position, index)
     local buttonLayout = Instance.new("UIListLayout")
     buttonLayout.FillDirection = Enum.FillDirection.Horizontal
     buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-    buttonLayout.Padding = UDim.new(0, 5)
+    buttonLayout.Padding = UDim.new(0, 3)  -- Dikurangi
     buttonLayout.Parent = buttonContainer
     
-    -- Tombol Teleport
+    -- Tombol Teleport - UKURAN DIKECILKAN
     local teleportButton = Instance.new("TextButton")
     teleportButton.Name = "Teleport"
     teleportButton.Text = "TP"
     teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    teleportButton.TextSize = cfg.fontSizeSmall
+    teleportButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
     teleportButton.Font = Enum.Font.GothamBold
     teleportButton.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
-    teleportButton.Size = UDim2.new(0, 35, 0, 35)
+    teleportButton.Size = UDim2.new(0, 30, 0, 30)  -- Dikurangi
     teleportButton.LayoutOrder = 1
     teleportButton.ZIndex = 55
     teleportButton.Parent = buttonContainer
     
     local teleportCorner = Instance.new("UICorner")
-    teleportCorner.CornerRadius = UDim.new(0, 6)
+    teleportCorner.CornerRadius = UDim.new(0, 4)  -- Dikurangi
     teleportCorner.Parent = teleportButton
     
-    -- Tombol Copy
+    -- Tombol Copy - UKURAN DIKECILKAN
     local copyButton = Instance.new("TextButton")
     copyButton.Name = "Copy"
     copyButton.Text = "COPY"
     copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copyButton.TextSize = cfg.fontSizeSmall
+    copyButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
     copyButton.Font = Enum.Font.GothamBold
     copyButton.BackgroundColor3 = Color3.fromRGB(120, 120, 180)
-    copyButton.Size = UDim2.new(0, 55, 0, 35)
+    copyButton.Size = UDim2.new(0, 45, 0, 30)  -- Dikurangi
     copyButton.LayoutOrder = 2
     copyButton.ZIndex = 55
     copyButton.Parent = buttonContainer
     
     local copyCorner = Instance.new("UICorner")
-    copyCorner.CornerRadius = UDim.new(0, 6)
+    copyCorner.CornerRadius = UDim.new(0, 4)  -- Dikurangi
     copyCorner.Parent = copyButton
     
-    -- Tombol Delete
+    -- Tombol Delete - UKURAN DIKECILKAN
     local deleteButton = Instance.new("TextButton")
     deleteButton.Name = "Delete"
     deleteButton.Text = "DEL"
     deleteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    deleteButton.TextSize = cfg.fontSizeSmall
+    deleteButton.TextSize = cfg.fontSizeSmall-1  -- Lebih kecil
     deleteButton.Font = Enum.Font.GothamBold
     deleteButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-    deleteButton.Size = UDim2.new(0, 35, 0, 35)
+    deleteButton.Size = UDim2.new(0, 30, 0, 30)  -- Dikurangi
     deleteButton.LayoutOrder = 3
     deleteButton.ZIndex = 55
     deleteButton.Parent = buttonContainer
     
     local deleteCorner = Instance.new("UICorner")
-    deleteCorner.CornerRadius = UDim.new(0, 6)
+    deleteCorner.CornerRadius = UDim.new(0, 4)  -- Dikurangi
     deleteCorner.Parent = deleteButton
     
     -- Fungsi untuk memilih checkpoint
@@ -958,12 +962,12 @@ local function addCheckpointToUI(checkpointName, position, index)
             end
         end
         
-        -- Update canvas size
-        scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 50)
+        -- Update canvas size - DIKECILKAN
+        scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 40)  -- Dikurangi
     end)
     
-    -- Update canvas size
-    scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 50)
+    -- Update canvas size - DIKECILKAN
+    scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 40)  -- Dikurangi
     
     return teleportToCheckpoint
 end
