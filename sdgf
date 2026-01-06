@@ -10,7 +10,7 @@ local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 local savedCheckpoints = {}
 local selectedCheckpoints = {}
-local teleportCooldown = 5
+local teleportCooldown = 1 -- Default 1 detik
 local isTeleporting = false
 local loopEnabled = false
 local guiVisible = false -- Start hidden
@@ -248,32 +248,66 @@ closeCorner.Parent = closeButton
 
 header.Parent = mainFrame
 
--- Container untuk konten
-local contentContainer = Instance.new("Frame")
+-- ========== SCROLLABLE CONTENT CONTAINER ==========
+local contentContainer = Instance.new("ScrollingFrame")
 contentContainer.Name = "ContentContainer"
 contentContainer.BackgroundTransparency = 1
 contentContainer.Size = UDim2.new(1, 0, 1, -60)
 contentContainer.Position = UDim2.new(0, 0, 0, 55)
 contentContainer.Visible = true
 contentContainer.ZIndex = 51
+contentContainer.ScrollBarThickness = cfg.scrollbarThickness
+contentContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
+contentContainer.ScrollingDirection = Enum.ScrollingDirection.Y
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 contentContainer.Parent = mainFrame
+
+-- Container untuk semua elemen di dalam scrolling frame
+local contentInner = Instance.new("Frame")
+contentInner.Name = "ContentInner"
+contentInner.BackgroundTransparency = 1
+contentInner.Size = UDim2.new(1, 0, 0, 0)
+contentInner.ZIndex = 51
+contentInner.Parent = contentContainer
 
 -- Layout vertikal untuk konten utama
 local mainLayout = Instance.new("UIListLayout")
 mainLayout.Padding = UDim.new(0, cfg.padding)
 mainLayout.SortOrder = Enum.SortOrder.LayoutOrder
 mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-mainLayout.Parent = contentContainer
+mainLayout.Parent = contentInner
+
+-- Fungsi untuk update canvas size
+local function updateContentSize()
+    local totalHeight = 0
+    for _, child in ipairs(contentInner:GetChildren()) do
+        if child:IsA("Frame") and child.Visible then
+            totalHeight = totalHeight + child.Size.Y.Offset + cfg.padding
+        end
+    end
+    
+    -- Atur tinggi contentInner
+    contentInner.Size = UDim2.new(1, 0, 0, totalHeight)
+    
+    -- Atur canvas size contentContainer
+    contentContainer.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+end
+
+-- Panggil updateContentSize ketika layout berubah
+mainLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    wait() -- Tunggu frame berikutnya untuk memastikan semua ukuran sudah diperbarui
+    updateContentSize()
+end)
 
 -- Bagian SAVED CHECKPOINTS
 local savedSection = Instance.new("Frame")
 savedSection.Name = "SavedSection"
 savedSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 savedSection.BackgroundTransparency = 0
-savedSection.Size = UDim2.new(0.95, 0, 0, 200)
+savedSection.Size = UDim2.new(0.95, 0, 0, 250)
 savedSection.LayoutOrder = 1
 savedSection.ZIndex = 51
-savedSection.Parent = contentContainer
+savedSection.Parent = contentInner
 
 local savedCorner = Instance.new("UICorner")
 savedCorner.CornerRadius = UDim.new(0, 12)
@@ -292,12 +326,38 @@ savedTitle.Position = UDim2.new(0, 0, 0, 5)
 savedTitle.ZIndex = 52
 savedTitle.Parent = savedSection
 
+-- ========== TOMBOL SELECT/DESELECT ALL YANG DIGABUNG ==========
+-- Baris tombol Select/Deselect All (SATU TOMBOL)
+local selectToggleRow = Instance.new("Frame")
+selectToggleRow.Name = "SelectToggleRow"
+selectToggleRow.BackgroundTransparency = 1
+selectToggleRow.Size = UDim2.new(0.95, 0, 0, cfg.buttonHeight-10)
+selectToggleRow.Position = UDim2.new(0.025, 0, 0, 30)
+selectToggleRow.ZIndex = 53
+selectToggleRow.Parent = savedSection
+
+-- Tombol Select/Deselect All (TOMBOL GABUNGAN)
+local selectToggleButton = Instance.new("TextButton")
+selectToggleButton.Name = "SelectToggleButton"
+selectToggleButton.Text = "SELECT ALL"
+selectToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+selectToggleButton.TextSize = cfg.fontSizeSmall
+selectToggleButton.Font = Enum.Font.GothamBold
+selectToggleButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120) -- Hijau untuk Select
+selectToggleButton.Size = UDim2.new(1, 0, 1, 0) -- Full width
+selectToggleButton.ZIndex = 54
+selectToggleButton.Parent = selectToggleRow
+
+local selectToggleCorner = Instance.new("UICorner")
+selectToggleCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
+selectToggleCorner.Parent = selectToggleButton
+
 -- Scroll container untuk daftar checkpoint
 local scrollContainer = Instance.new("ScrollingFrame")
 scrollContainer.Name = "ScrollContainer"
 scrollContainer.BackgroundTransparency = 1
 scrollContainer.Size = UDim2.new(0.95, 0, 0, 160)
-scrollContainer.Position = UDim2.new(0.025, 0, 0, 35)
+scrollContainer.Position = UDim2.new(0.025, 0, 0, 35 + cfg.buttonHeight - 5)
 scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
 scrollContainer.ScrollBarThickness = cfg.scrollbarThickness
 scrollContainer.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 120)
@@ -314,10 +374,10 @@ local addSection = Instance.new("Frame")
 addSection.Name = "AddSection"
 addSection.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 addSection.BackgroundTransparency = 0
-addSection.Size = UDim2.new(0.95, 0, 0, 340)
+addSection.Size = UDim2.new(0.95, 0, 0, 380) -- Dikurangi agar pas
 addSection.LayoutOrder = 2
 addSection.ZIndex = 51
-addSection.Parent = contentContainer
+addSection.Parent = contentInner
 
 local addCorner = Instance.new("UICorner")
 addCorner.CornerRadius = UDim.new(0, 12)
@@ -517,7 +577,7 @@ cooldownLabel.Parent = cooldownContainer
 -- Dropdown untuk cooldown
 local cooldownDropdown = Instance.new("TextButton")
 cooldownDropdown.Name = "CooldownDropdown"
-cooldownDropdown.Text = tostring(teleportCooldown) .. "s"
+cooldownDropdown.Text = "1s" -- Default 1 detik
 cooldownDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
 cooldownDropdown.TextSize = cfg.fontSizeMedium
 cooldownDropdown.Font = Enum.Font.GothamBold
@@ -579,10 +639,25 @@ for i = 1, 100 do
     optionCorner.CornerRadius = UDim.new(0, 6)
     optionCorner.Parent = optionButton
     
+    -- Highlight option 1 sebagai default
+    if i == 1 then
+        optionButton.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
+        optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    
     optionButton.MouseButton1Click:Connect(function()
         teleportCooldown = i
         cooldownDropdown.Text = tostring(i) .. "s"
         dropdownFrame.Visible = false
+        
+        -- Reset semua warna option
+        for _, child in ipairs(dropdownScroll:GetChildren()) do
+            if child:IsA("TextButton") then
+                child.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
+            end
+        end
+        -- Highlight option yang dipilih
+        optionButton.BackgroundColor3 = Color3.fromRGB(80, 160, 220)
     end)
 end
 
@@ -666,11 +741,12 @@ local loadCorner = Instance.new("UICorner")
 loadCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 loadCorner.Parent = loadButton
 
--- Baris tombol Delete
+-- ========== TOMBOL DELETE YANG TERLIHAT JELAS ==========
+-- Baris tombol Delete (DIUBAH UKURAN UNTUK TERLIHAT JELAS)
 local deleteRow = Instance.new("Frame")
 deleteRow.Name = "DeleteRow"
 deleteRow.BackgroundTransparency = 1
-deleteRow.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight)
+deleteRow.Size = UDim2.new(0.9, 0, 0, cfg.buttonHeight + 5) -- Ditambah tinggi
 deleteRow.LayoutOrder = 6
 deleteRow.ZIndex = 52
 deleteRow.Parent = addSection
@@ -681,7 +757,7 @@ deleteLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 deleteLayout.Padding = UDim.new(0, cfg.padding)
 deleteLayout.Parent = deleteRow
 
--- Tombol Delete Selected (WARNA LEBIH CERAH)
+-- Tombol Delete Selected (WARNA MERAH CERAH)
 local deleteSelectedButton = Instance.new("TextButton")
 deleteSelectedButton.Name = "DeleteSelectedButton"
 deleteSelectedButton.Text = "DELETE SELECTED"
@@ -698,14 +774,14 @@ local deleteSelectedCorner = Instance.new("UICorner")
 deleteSelectedCorner.CornerRadius = UDim.new(0, cfg.cornerRadius)
 deleteSelectedCorner.Parent = deleteSelectedButton
 
--- Tombol Delete All (WARNA LEBIH CERAH)
+-- Tombol Delete All (WARNA MERAH GELAP)
 local deleteAllButton = Instance.new("TextButton")
 deleteAllButton.Name = "DeleteAllButton"
 deleteAllButton.Text = "DELETE ALL"
 deleteAllButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 deleteAllButton.TextSize = cfg.fontSizeMedium
 deleteAllButton.Font = Enum.Font.GothamBold
-deleteAllButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60) -- Merah cerah
+deleteAllButton.BackgroundColor3 = Color3.fromRGB(180, 50, 50) -- Merah lebih gelap
 deleteAllButton.Size = UDim2.new(0.48, 0, 1, 0)
 deleteAllButton.LayoutOrder = 2
 deleteAllButton.ZIndex = 53
@@ -880,6 +956,9 @@ local function addCheckpointToUI(checkpointName, position, index)
                 -- Kembalikan warna checkpoint ke semula
                 checkpointFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
             end
+            
+            -- Update tombol select/deselect
+            updateSelectToggleButton()
         end
     end)
     
@@ -960,6 +1039,9 @@ local function addCheckpointToUI(checkpointName, position, index)
         
         -- Update canvas size
         scrollContainer.CanvasSize = UDim2.new(0, 0, 0, #savedCheckpoints * 50)
+        
+        -- Update tombol select/deselect
+        updateSelectToggleButton()
     end)
     
     -- Update canvas size
@@ -974,6 +1056,86 @@ local function saveCheckpoint(position)
     table.insert(savedCheckpoints, {name = checkpointName, position = position})
     addCheckpointToUI(checkpointName, position, #savedCheckpoints)
 end
+
+-- Fungsi untuk update tombol Select/Deselect All
+local function updateSelectToggleButton()
+    if #savedCheckpoints == 0 then
+        selectToggleButton.Text = "SELECT ALL"
+        selectToggleButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120) -- Hijau
+        return
+    end
+    
+    -- Cek apakah semua checkpoint terpilih
+    local allSelected = true
+    for i = 1, #savedCheckpoints do
+        if not selectedCheckpoints[i] then
+            allSelected = false
+            break
+        end
+    end
+    
+    if allSelected then
+        selectToggleButton.Text = "DESELECT ALL"
+        selectToggleButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80) -- Merah
+    else
+        selectToggleButton.Text = "SELECT ALL"
+        selectToggleButton.BackgroundColor3 = Color3.fromRGB(80, 180, 120) -- Hijau
+    end
+end
+
+-- Fungsi untuk tombol Select/Deselect All (TOMBOL GABUNGAN)
+selectToggleButton.MouseButton1Click:Connect(function()
+    if #savedCheckpoints > 0 then
+        -- Cek apakah semua sudah terpilih
+        local allSelected = true
+        for i = 1, #savedCheckpoints do
+            if not selectedCheckpoints[i] then
+                allSelected = false
+                break
+            end
+        end
+        
+        if allSelected then
+            -- Deselect semua
+            selectedCheckpoints = {}
+            
+            -- Update warna semua checkpoint di UI
+            for _, child in ipairs(scrollContainer:GetChildren()) do
+                if child:IsA("Frame") and child.Name:find("Checkpoint") then
+                    child.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+                end
+            end
+            
+            -- Feedback visual
+            local originalColor = selectToggleButton.BackgroundColor3
+            selectToggleButton.BackgroundColor3 = Color3.fromRGB(220, 100, 100)
+            selectToggleButton.Text = "DESELECTED ALL!"
+        else
+            -- Select semua
+            selectedCheckpoints = {}
+            for i = 1, #savedCheckpoints do
+                selectedCheckpoints[i] = true
+            end
+            
+            -- Update warna semua checkpoint di UI
+            for _, child in ipairs(scrollContainer:GetChildren()) do
+                if child:IsA("Frame") and child.Name:find("Checkpoint") then
+                    child.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+                end
+            end
+            
+            -- Feedback visual
+            local originalColor = selectToggleButton.BackgroundColor3
+            selectToggleButton.BackgroundColor3 = Color3.fromRGB(100, 220, 100)
+            selectToggleButton.Text = "SELECTED ALL!"
+        end
+        
+        spawn(function()
+            wait(1)
+            updateSelectToggleButton()
+        end)
+    end
+end)
 
 -- Fungsi untuk mendapatkan daftar checkpoint yang akan di-teleport
 local function getTeleportSequence()
@@ -1164,6 +1326,9 @@ saveButton.MouseButton1Click:Connect(function()
         local pos = hrp.Position
         saveCheckpoint(pos)
         
+        -- Update tombol select/deselect
+        updateSelectToggleButton()
+        
         -- Feedback visual
         local originalColor = saveButton.BackgroundColor3
         saveButton.BackgroundColor3 = Color3.fromRGB(80, 220, 120)
@@ -1268,6 +1433,9 @@ loadButton.MouseButton1Click:Connect(function()
         -- Clear input
         coordinateInput.Text = ""
         
+        -- Update tombol select/deselect
+        updateSelectToggleButton()
+        
         -- Feedback visual
         local originalColor = loadButton.BackgroundColor3
         if successCount > 0 then
@@ -1328,6 +1496,9 @@ deleteSelectedButton.MouseButton1Click:Connect(function()
             addCheckpointToUI(checkpoint.name, checkpoint.position, i)
         end
         
+        -- Update tombol select/deselect
+        updateSelectToggleButton()
+        
         -- Feedback visual
         local originalColor = deleteSelectedButton.BackgroundColor3
         deleteSelectedButton.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
@@ -1358,6 +1529,9 @@ deleteAllButton.MouseButton1Click:Connect(function()
         
         -- Reset canvas size
         scrollContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+        
+        -- Update tombol select/deselect
+        updateSelectToggleButton()
         
         -- Feedback visual
         local originalColor = deleteAllButton.BackgroundColor3
@@ -1410,13 +1584,17 @@ coordinateInput.Focused:Connect(function()
     end)
 end)
 
+-- Panggil updateContentSize setelah semua elemen dibuat
+spawn(function()
+    wait(0.5) -- Tunggu sebentar untuk memastikan semua elemen sudah dibuat
+    updateContentSize()
+end)
+
 -- Update posisi awal
 updatePositionDisplay()
 
--- Tambahkan beberapa checkpoint contoh
-spawn(function()
-    wait(1)
-end)
+-- Update tombol select/deselect awal
+updateSelectToggleButton()
 
 -- Pasang GUI ke player
 screenGui.Parent = player.PlayerGui
